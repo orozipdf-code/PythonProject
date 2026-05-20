@@ -30,12 +30,15 @@
     .chart-header { background: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
     .chart-header .time-value { font-size: 14px; font-weight: 700; }
 
+    .search-input { padding: 6px 12px; font-size: 12px; border-radius: 20px; border: 1.5px solid #ddd; outline: none; width: 150px; transition: all 0.2s ease-in-out; font-family: inherit; }
+    .search-input:focus { border-color: var(--store-color); width: 200px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
     .filter-btn { padding: 5px 12px; font-size: 12px; font-weight: 700; border-radius: 20px; cursor: pointer; border: 1.5px solid var(--store-color); color: var(--store-color); background: #fff; transition: all 0.15s; white-space: nowrap; }
     .filter-btn.active { background: var(--store-color); color: #fff; }
 
     .book-item { background: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: box-shadow 0.15s; }
     .book-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .book-item.hidden { display: none; }
+    .book-item.hidden { display: none !important; }
     .book-item.highlight { border-left: 3px solid var(--store-color); }
 
     .rank-col { min-width: 34px; text-align: center; flex-shrink: 0; }
@@ -71,7 +74,7 @@
 
     /* ── 뷰 토글 ── */
     .chart-header { flex-wrap: wrap; gap: 8px; }
-    .chart-header-left { display: flex; align-items: center; gap: 10px; }
+    .chart-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .view-toggle { display: flex; gap: 4px; background: #f0f0f0; border-radius: 8px; padding: 3px; }
     .view-btn { padding: 5px 11px; border-radius: 6px; border: none; background: none; cursor: pointer; font-size: 15px; color: #999; line-height: 1; transition: all 0.15s; }
     .view-btn.active { background: #fff; color: var(--store-color); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
@@ -84,7 +87,7 @@
     .gallery-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; flex-direction: column; border: 2px solid transparent; transition: box-shadow 0.15s, transform 0.15s; }
     .gallery-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.13); transform: translateY(-2px); }
     .gallery-card.highlight { border-color: var(--store-color); }
-    .gallery-card.hidden { display: none; }
+    .gallery-card.hidden { display: none !important; }
 
     .card-img-wrap { position: relative; aspect-ratio: 3 / 4; background: #e8e8e8; overflow: hidden; flex-shrink: 0; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -144,21 +147,19 @@ const RAW = "https://raw.githubusercontent.com/orozipdf-code/orozi-test/master/"
 const CSV_FILES = { kyobo: "kyobo_bestseller.csv", aladin: "aladin_bestseller.csv", yes24: "yes24_bestseller.csv" };
 const STORE_COLORS = { kyobo: "#6DB329", aladin: "#FB2888", yes24: "#0080FF" };
 
-const OUR_PUBLISHERS = [
-  "윌북", "윌북아트", "윌북주니어"
-];
+const OUR_PUBLISHERS = ["윌북", "윌북아트", "윌북주니어"];
 
 let currentMainTab = 'latest';
 let currentStore = 'kyobo';
 let historyData = [];
 let filterOn = false;
+let searchQuery = '';
 let currentView = 'list';
 
 function setStoreColor(store) {
   document.documentElement.style.setProperty('--store-color', STORE_COLORS[store]);
 }
 
-// 이하는 가독성을 위해 기존 로직 유지
 function showMainTab(tab) {
   currentMainTab = tab;
   document.querySelectorAll('.tab').forEach((t, i) => {
@@ -173,6 +174,7 @@ function setStore(store) {
   currentStore = store;
   setStoreColor(store);
   filterOn = false;
+  searchQuery = '';
   document.querySelectorAll('.store-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.store === store);
   });
@@ -202,11 +204,50 @@ function toOnTheHour(timeStr) {
 
 function setView(view) {
   currentView = view;
-  document.querySelectorAll('.view-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', (i === 0 && view === 'list') || (i === 1 && view === 'gallery'));
+
+  document.querySelectorAll('.view-toggle').forEach(toggle => {
+    const listBtn = toggle.querySelector('.view-btn:nth-child(1)');
+    const galleryBtn = toggle.querySelector('.view-btn:nth-child(2)');
+    if (listBtn) listBtn.classList.toggle('active', view === 'list');
+    if (galleryBtn) galleryBtn.classList.toggle('active', view === 'gallery');
   });
-  document.querySelectorAll('.books-list-view').forEach(el => { el.style.display = view === 'list' ? '' : 'none'; });
-  document.querySelectorAll('.books-gallery-view').forEach(el => { el.style.display = view === 'gallery' ? '' : 'none'; });
+
+  document.querySelectorAll('.books-list-view').forEach(el => el.style.display = view === 'list' ? '' : 'none');
+  document.querySelectorAll('.books-gallery-view').forEach(el => el.style.display = view === 'gallery' ? '' : 'none');
+
+  applyFilters();
+}
+
+/* 🛠️ 버그 완전 해결: 갤러리 카드의 모든 텍스트 요소를 빠짐없이 결합하여 다중 검색 적용 */
+function applyFilters() {
+  const items = document.querySelectorAll('.book-item, .gallery-card');
+  items.forEach(el => {
+    const isOurs = el.dataset.ours === 'true';
+
+    // 제목, 저자, 출판사 클래스를 전부 선택해서 텍스트를 하나로 묶어줍니다!
+    const targets = el.querySelectorAll('.book-title, .card-title, .book-meta, .card-author, .card-publisher');
+    let combinedText = '';
+    targets.forEach(target => {
+      combinedText += target.textContent.toLowerCase() + ' ';
+    });
+
+    const matchesPub = !filterOn || isOurs;
+    const matchesSearch = combinedText.includes(searchQuery);
+
+    el.classList.toggle('hidden', !(matchesPub && matchesSearch));
+  });
+}
+
+function toggleFilter() {
+  filterOn = !filterOn;
+  const btn = document.getElementById('filterBtn');
+  if (btn) btn.classList.toggle('active', filterOn);
+  applyFilters();
+}
+
+function handleSearch(e) {
+  searchQuery = e.target.value.toLowerCase().trim();
+  applyFilters();
 }
 
 function renderBooks(books, container) {
@@ -220,14 +261,13 @@ function renderBooks(books, container) {
   books.forEach(book => {
     const rank = parseInt(book['순위']) || 0;
     const { icon, cls } = changeIcon(book['순위변동'] || '');
-    const link = book['링크'] || '';
+    const link = book['LINK'] || book['링크'] || '';
     const publisher = book['출판사'] || '';
     const author = book['저자'] || '';
     const imgUrl = book['이미지URL'] || '';
     const isOurs = isOurPublisher(publisher);
-    const hiddenClass = filterOn && !isOurs ? 'hidden' : '';
 
-    listHtml += `<div class="book-item ${hiddenClass} ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}">
+    listHtml += `<div class="book-item ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}">
       <div class="rank-col">
         <div class="rank-num ${rank<=3?'top3':''}">${rank}</div>
         <div class="change-badge ${cls}">${icon}</div>
@@ -241,7 +281,7 @@ function renderBooks(books, container) {
     </div>`;
 
     const imgContent = imgUrl ? `<img src="${imgUrl}" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentElement.classList.add('skeleton');this.style.display='none';" alt="${(book['제목']||'').replace(/"/g,'')}">` : '';
-    galleryHtml += `<div class="gallery-card ${hiddenClass} ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}">
+    galleryHtml += `<div class="gallery-card ${isOurs ? 'highlight' : ''}" data-ours="${isOurs}">
       <div class="card-img-wrap ${imgUrl ? '' : 'skeleton'}">${imgContent}</div>
       <div class="card-info">
         <div class="card-rank-row"><span class="card-rank ${rank<=3?'top3':''}">${rank}</span><span class="card-change ${cls}">${icon}</span></div>
@@ -257,6 +297,7 @@ function renderBooks(books, container) {
     <div class="chart-header">
       <div class="chart-header-left">
         <span class="time-value">📅 ${toOnTheHour(time)}</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 제목, 저자 실시간 검색..." oninput="handleSearch(event)" value="${searchQuery}">
         <button class="filter-btn ${filterOn ? 'active' : ''}" id="filterBtn" onclick="toggleFilter()">우리 출판사만 보기</button>
       </div>
       <div class="view-toggle">
@@ -266,15 +307,8 @@ function renderBooks(books, container) {
     </div>
     <div class="books-list-view" style="${currentView==='gallery'?'display:none':''}">\n${listHtml}\n</div>
     <div class="books-gallery-view gallery-grid" style="${currentView==='list'?'display:none':''}">\n${galleryHtml}\n</div>`;
-}
 
-function toggleFilter() {
-  filterOn = !filterOn;
-  const btn = document.getElementById('filterBtn');
-  if (btn) btn.classList.toggle('active', filterOn);
-  document.querySelectorAll('.book-item[data-ours], .gallery-card[data-ours]').forEach(el => {
-    el.classList.toggle('hidden', filterOn && el.dataset.ours !== 'true');
-  });
+  applyFilters();
 }
 
 function renderHistoryList(history) {
@@ -298,7 +332,7 @@ function renderHistoryList(history) {
 }
 
 function showHistoryDetail(index) {
-  filterOn = false; const entry = historyData[index]; if (!entry) return;
+  filterOn = false; searchQuery = ''; const entry = historyData[index]; if (!entry) return;
   const books = entry['데이터']?.[currentStore] || [];
   const container = document.getElementById('history-view'); container.innerHTML = '';
   const btn = document.createElement('button'); btn.className = 'back-btn'; btn.innerHTML = '← 목록으로';
