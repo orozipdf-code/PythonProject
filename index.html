@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>안형욱이 훔쳐보는 실시간 베스트셀러</title>
+  <title>실시간 베스트셀러</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f8f8f8; color: #222; }
@@ -24,7 +24,7 @@
     .store-tab[data-store="kyobo"].active { background: #6DB329; border-color: #6DB329; }
     .store-tab[data-store="aladin"].active { background: #FB2888; border-color: #FB2888; }
     .store-tab[data-store="yes24"].active { background: #0080FF; border-color: #0080FF; }
-    .store-tab[data-store="total"].active { background: #8e44ad; border-color: #8e44ad; } /* 통합 차트 전용 컬러 (보라색) */
+    .store-tab[data-store="total"].active { background: #8e44ad; border-color: #8e44ad; }
 
     .container { max-width: 900px; margin: 0 auto; padding: 20px; }
 
@@ -42,7 +42,6 @@
     .filter-btn { padding: 5px 12px; font-size: 12px; font-weight: 700; border-radius: 20px; cursor: pointer; border: 1.5px solid var(--store-color); color: var(--store-color); background: #fff; transition: all 0.15s; white-space: nowrap; }
     .filter-btn.active { background: var(--store-color); color: #fff; }
 
-    /* 클릭 가능한 카드 스타일 지정 */
     .book-item { background: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: all 0.15s; cursor: pointer; }
     .book-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateX(2px); border-left-color: var(--store-color); }
     .book-item.hidden { display: none !important; }
@@ -56,7 +55,7 @@
     .change-badge.down { color: #4a90e2; }
     .change-badge.new { color: #ff7f00; }
     .change-badge.same { color: #bbb; }
-    .change-badge.pts { color: #8e44ad; font-size: 10px; background:#f4ebf9; padding: 2px 4px; border-radius: 4px;} /* 통합 차트 포인트 배지 */
+    .change-badge.pts { color: #8e44ad; font-size: 10px; background:#f4ebf9; padding: 2px 4px; border-radius: 4px;}
 
     .divider { width: 1px; height: 36px; background: #eee; flex-shrink: 0; }
     .book-info { flex: 1; min-width: 0; }
@@ -70,6 +69,7 @@
 
     .loading { text-align: center; padding: 60px; color: #aaa; }
     .error { text-align: center; padding: 40px; color: #e60012; font-size: 14px; }
+    .empty-msg { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; width: 100%; }
 
     .history-list { display: flex; flex-direction: column; gap: 8px; }
     .history-item { background: #fff; border-radius: 10px; padding: 14px 18px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; justify-content: space-between; align-items: center; }
@@ -139,8 +139,8 @@
 
 <div class="header" id="header">
   <div class="header-inner">
-    <div class="logo" id="logo">BESTSELLER POWERED BY AHU</div>
-    <h1>안형욱이 훔쳐보는 실시간 베스트셀러</h1>
+    <div class="logo" id="logo">REALTIME BESTSELLER</div>
+    <h1>실시간 베스트셀러</h1>
     <div class="tabs-row">
       <div class="tabs">
         <div class="tab active" onclick="showMainTab('latest')">최신 차트</div>
@@ -174,12 +174,15 @@
 </div>
 
 <script>
-const RAW = "https://raw.githubusercontent.com/orozipdf-code/orozi-test/master/";
+// 🔌 장미 씨 원본 저장소 다이렉트 연결 (시차 없음)
+const RAW = "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/";
 const CSV_FILES = { kyobo: "kyobo_bestseller.csv", aladin: "aladin_bestseller.csv", yes24: "yes24_bestseller.csv" };
 const STORE_COLORS = { kyobo: "#6DB329", aladin: "#FB2888", yes24: "#0080FF", total: "#8e44ad" };
 const STORE_NAMES = { kyobo: "교보", aladin: "알라딘", yes24: "예스24" };
 
-const OUR_PUBLISHERS = ["윌북", "윌북아트", "윌북주니어"];
+const OUR_PUBLISHERS = [
+  "윌북", "윌북주니어", "윌북아트"
+];
 
 let currentMainTab = 'latest';
 let currentStore = 'kyobo';
@@ -187,7 +190,7 @@ let historyData = [];
 let filterOn = false;
 let searchQuery = '';
 let currentView = 'list';
-let searchTimeout; // 검색창 디바운스용 변수
+let searchTimeout;
 
 function setStoreColor(store) {
   document.documentElement.style.setProperty('--store-color', STORE_COLORS[store]);
@@ -219,12 +222,23 @@ function isOurPublisher(publisher) {
   return OUR_PUBLISHERS.some(p => publisher && publisher.includes(p));
 }
 
+/* 🚥 만능 기호 판독기: ▲, ▼, 상승, 하락 모두 커버 */
 function changeIcon(change, points = null) {
   if (points !== null) return { icon: `${points}점`, cls: 'pts' };
-  if (!change || change === '-') return { icon: '–', cls: 'same' };
-  if (change === 'NEW') return { icon: 'NEW', cls: 'new' };
-  if (change.startsWith('↑')) return { icon: change, cls: 'up' };
-  if (change.startsWith('↓')) return { icon: change, cls: 'down' };
+  const val = (change || '').toString().trim().toUpperCase();
+
+  if (!val || val === '-' || val === '0' || val === '유지') {
+    return { icon: '–', cls: 'same' };
+  }
+  if (val === 'NEW' || val === '진입') {
+    return { icon: 'NEW', cls: 'new' };
+  }
+  if (val.includes('↑') || val.includes('▲') || val.includes('상승')) {
+    return { icon: change, cls: 'up' };
+  }
+  if (val.includes('↓') || val.includes('▼') || val.includes('하락')) {
+    return { icon: change, cls: 'down' };
+  }
   return { icon: change, cls: 'same' };
 }
 
@@ -251,6 +265,8 @@ function setView(view) {
 
 function applyFilters() {
   const items = document.querySelectorAll('.book-item, .gallery-card');
+  let visibleCount = 0;
+
   items.forEach(el => {
     const isOurs = el.dataset.ours === 'true';
     const targets = el.querySelectorAll('.book-title, .card-title, .book-meta, .card-author, .card-publisher');
@@ -258,8 +274,24 @@ function applyFilters() {
     targets.forEach(t => combinedText += t.textContent.toLowerCase() + ' ');
     const matchesPub = !filterOn || isOurs;
     const matchesSearch = combinedText.includes(searchQuery);
-    el.classList.toggle('hidden', !(matchesPub && matchesSearch));
+    const isHidden = !(matchesPub && matchesSearch);
+
+    el.classList.toggle('hidden', isHidden);
+    if (!isHidden) visibleCount++;
   });
+
+  const existingMsg = document.getElementById('empty-msg');
+  if (visibleCount === 0) {
+    if (!existingMsg) {
+      const msg = document.createElement('div');
+      msg.id = 'empty-msg';
+      msg.className = 'empty-msg';
+      msg.textContent = '조건에 맞는 책이 없어요 📭';
+      document.querySelector('.books-list-view').parentNode.appendChild(msg);
+    }
+  } else {
+    if (existingMsg) existingMsg.remove();
+  }
 }
 
 function toggleFilter() {
@@ -269,7 +301,6 @@ function toggleFilter() {
   applyFilters();
 }
 
-/* ⚡ 검색창 과부하 방지 (Debounce) */
 function handleSearch(e) {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
@@ -306,7 +337,6 @@ function calculateTotal(kData, aData, yData) {
   return sorted;
 }
 
-/* 📈 팝업 최신순 역렬 수정 완료됨! */
 function openTrendModal(el) {
   const title = el.dataset.title;
   const author = el.dataset.author;
@@ -314,7 +344,6 @@ function openTrendModal(el) {
   document.getElementById('modalAuthor').textContent = author;
 
   let html = '';
-  // 원본 데이터를 뒤집어서 최신이 맨 위에 오도록 수정
   const limits = [...historyData].reverse().slice(0, 12);
 
   limits.forEach((entry, idx) => {
@@ -409,6 +438,9 @@ function renderBooks(books, container) {
     </div>`;
   });
 
+  const existingMsg = document.getElementById('empty-msg');
+  if (existingMsg) existingMsg.remove();
+
   container.innerHTML = `
     <div class="chart-header">
       <div class="chart-header-left">
@@ -418,8 +450,8 @@ function renderBooks(books, container) {
         <button class="filter-btn ${filterOn ? 'active' : ''}" id="filterBtn" onclick="toggleFilter()">우리 출판사만 보기</button>
       </div>
       <div class="view-toggle">
-        <button class="view-btn ${currentView==='list'?'active':''}" onclick="setView('list')">☰</button>
-        <button class="view-btn ${currentView==='gallery'?'active':''}" onclick="setView('gallery')">⊞</button>
+        <button class="view-btn ${currentView==='list'?'active':''}" onclick="setView('list')" title="리스트 뷰">☰</button>
+        <button class="view-btn ${currentView==='gallery'?'active':''}" onclick="setView('gallery')" title="갤러리 뷰">⊞</button>
       </div>
     </div>
     <div class="books-list-view" style="${currentView==='gallery'?'display:none':''}">\n${listHtml}\n</div>
@@ -492,7 +524,6 @@ function parseCSV(text) {
   });
 }
 
-/* 🛡️ 무적의 재시도 로직 + 캐시 완벽 차단 함수 */
 async function fetchWithRetry(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -535,5 +566,6 @@ async function loadHistory() {
 
 setStoreColor('kyobo'); loadLatest(); loadHistory();
 </script>
+<script data-goatcounter="https://rt-bestseller.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
