@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>실시간 베스트셀러 (Clone)</title>
+    <style>
+        /* 깔끔한 UI를 위한 CSS (원본 사이트와 비슷한 느낌으로) */
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background-color: #f9f9f9; }
+        h1 { text-align: center; color: #333; }
+
+        /* 탭 버튼 스타일 */
+        .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .tabs button {
+            padding: 10px 20px; font-size: 16px; cursor: pointer;
+            border: none; border-radius: 5px; background-color: #ddd;
+            transition: 0.3s;
+        }
+        .tabs button:hover { background-color: #bbb; }
+        .tabs button.active { background-color: #4CAF50; color: white; font-weight: bold; }
+
+        /* 책 목록 카드 스타일 */
+        .book-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+        .book-card {
+            background: white; border: 1px solid #eee; padding: 15px; width: 220px;
+            text-align: center; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .book-card img { max-width: 100%; height: 250px; object-fit: cover; border-radius: 5px; margin-bottom: 10px; }
+        h3 { color: #e91e63; margin: 0 0 10px 0; }
+        h4 { margin: 0 0 5px 0; font-size: 16px; }
+        p { margin: 0; color: #777; font-size: 14px; }
+
+        #loading { text-align: center; font-size: 18px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h1>📚 실시간 베스트셀러</h1>
+
+    <div class="tabs">
+        <button id="btn-kyobo" class="active" onclick="renderBooks('kyobo')">교보문고</button>
+        <button id="btn-aladin" onclick="renderBooks('aladin')">알라딘</button>
+        <button id="btn-yes24" onclick="renderBooks('yes24')">예스24</button>
+    </div>
+
+    <div id="loading">데이터를 불러오는 중...</div>
+    <div id="book-list" class="book-container"></div>
+
+    <script>
+        let allBooks = []; // 모든 책 데이터를 담을 바구니
+
+        // 1. JSON 파일 가져오기
+        async function fetchBestsellerData() {
+            try {
+                const response = await fetch('bestseller_data.json');
+                const jsonData = await response.json();
+
+                allBooks = jsonData.data;
+                document.getElementById('loading').style.display = 'none'; // 로딩 글자 숨기기
+
+                // 데이터를 다 가져오면 기본으로 '교보문고' 먼저 보여주기
+                renderBooks('kyobo');
+            } catch (error) {
+                document.getElementById('loading').innerText = "데이터를 불러오는데 실패했습니다. (json 파일을 확인해주세요)";
+                console.error(error);
+            }
+        }
+
+        // 2. 화면에 선택된 서점의 책 그리기
+        function renderBooks(storeName) {
+            // 버튼 색상 변경 로직 (선택된 버튼만 초록색으로)
+            document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + storeName).classList.add('active');
+
+            const container = document.getElementById('book-list');
+            container.innerHTML = ''; // 화면 비우기
+
+            // allBooks에서 선택된 서점(storeName)의 데이터만 골라내기
+            const filteredBooks = allBooks.filter(book => book.store === storeName);
+
+            // 데이터가 없을 경우 처리
+            if (filteredBooks.length === 0) {
+                container.innerHTML = `<p style="text-align:center; width:100%;">수집된 ${storeName} 데이터가 없습니다.</p>`;
+                return;
+            }
+
+            // 필터링된 책들을 카드 형태로 만들기
+            filteredBooks.forEach(book => {
+                const imageSrc = book.image ? book.image : 'https://via.placeholder.com/150x200?text=No+Image'; // 이미지 없으면 임시 이미지
+                const bookHTML = `
+                    <div class="book-card">
+                        <h3>${book.rank}위</h3>
+                        <img src="${imageSrc}" alt="표지">
+                        <h4>${book.title}</h4>
+                        <p>${book.author}</p>
+                    </div>
+                `;
+                container.innerHTML += bookHTML;
+            });
+        }
+
+        // 웹페이지가 켜질 때 데이터 Fetch 시작
+        window.onload = fetchBestsellerData;
+    </script>
+</body>
+</html>
