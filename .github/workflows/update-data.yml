@@ -2,8 +2,6 @@ name: scraping
 
 on:
   schedule:
-    # GitHub cron 은 UTC 기준. 23/51분은 정각 부하를 피하기 위해 선택.
-    # KST 도 분 단위는 동일하므로 매시 23분, 51분에 실행됨.
     - cron: '23 * * * *'
     - cron: '51 * * * *'
   workflow_dispatch:
@@ -13,11 +11,10 @@ on:
         required: false
         default: 'manual'
 
-# GITHUB_TOKEN 에 쓰기 권한을 명시적으로 부여
 permissions:
   contents: write
 
-# 같은 워크플로우가 중첩 실행되어 push 충돌나는 것을 방지
+# 같은 워크플로우의 동시 실행 차단 — 충돌의 근본 원인
 concurrency:
   group: scraping-${{ github.ref }}
   cancel-in-progress: false
@@ -31,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0   # rebase 를 위해 전체 히스토리 받기
+          fetch-depth: 1
 
       - name: Python 설정
         uses: actions/setup-python@v5
@@ -52,25 +49,62 @@ jobs:
             python scraper.py --event workflow_dispatch
           fi
 
-      - name: 결과 커밋 & 푸시
+      - name: 결과 커밋 & 푸시 (rebase 없이 강제 덮어쓰기)
         run: |
+          set -e
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add kyobo_bestseller.csv aladin_bestseller.csv yes24_bestseller.csv history.json
 
-          # 변경 없으면 그냥 종료 (실패 X)
-          if git diff --staged --quiet; then
-            echo "변경 사항 없음 — 커밋 생략"
+          FILES="kyobo_bestseller.csv aladin_bestseller.csv yes24_bestseller.csv history.json"
+
+          if git diff --quiet -- $FILES; then
+            echo "변경 사항 없음 — 종료"
             exit 0
           fi
 
-          git commit -m "자동 수집: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M') KST"
+          MSG="자동 수집: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M') KST"
 
-          # 동시 실행이나 외부 push 와의 충돌을 견디기 위한 재시도 로직
+          # 핵심 전략:
+          # scraper 가 매번 새 데이터를 만드는 구조 → 가장 최근 결과가 곧 정답.
+          # CSV 단위로 merge / rebase 해봐야 어차피 충돌 → 그냥 origin 위에 덮어쓴다.
+          git fetch origin master
+
+          # 결과 파일을 임시 백업
+          mkdir -p /tmp/scraped
+          for f in $FILES; do
+            [ -f "$f" ] && cp "$f" "/tmp/scraped/$f"
+          done
+
+          # origin/master 기준으로 작업트리 동기화
+          git reset --hard origin/master
+
+          # 백업한 결과 파일을 다시 덮어쓰기
+          for f in $FILES; do
+            [ -f "/tmp/scraped/$f" ] && cp "/tmp/scraped/$f" "$f"
+          done
+
+          if git diff --quiet -- $FILES; then
+            echo "origin 과 동일 — 종료"
+            exit 0
+          fi
+
+          git add $FILES
+          git commit -m "$MSG"
+
+          # 푸시 — concurrency 가드 덕에 동시 실행은 없지만,
+          # 외부 push 와의 경합에 대비해 재시도
           for i in 1 2 3; do
-            git pull --rebase origin master && git push origin master && exit 0
-            echo "push 시도 $i 실패, 2초 후 재시도..."
+            if git push origin master; then
+              echo "푸시 성공"
+              exit 0
+            fi
+            echo "push 시도 $i 실패, fetch 후 재시도..."
+            git fetch origin master
+            git reset --soft origin/master
+            git add $FILES
+            git commit -m "$MSG"
             sleep 2
           done
+
           echo "::error::push 3회 모두 실패"
           exit 1
