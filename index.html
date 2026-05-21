@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>실시간 베스트셀러</title>
-  <style>
+  <title>(안형욱이 훔쳐보는) 실시간 베스트셀러</title>
+  <link rel="icon" href="logo.png">
+    <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f8f8f8; color: #222; }
 
@@ -24,7 +25,7 @@
     .store-tab[data-store="kyobo"].active { background: #6DB329; border-color: #6DB329; }
     .store-tab[data-store="aladin"].active { background: #FB2888; border-color: #FB2888; }
     .store-tab[data-store="yes24"].active { background: #0080FF; border-color: #0080FF; }
-    .store-tab[data-store="total"].active { background: #8e44ad; border-color: #8e44ad; } 
+    .store-tab[data-store="total"].active { background: #8e44ad; border-color: #8e44ad; }
 
     .container { max-width: 900px; margin: 0 auto; padding: 20px; }
 
@@ -55,13 +56,13 @@
     .change-badge.down { color: #4a90e2; }
     .change-badge.new { color: #ff7f00; }
     .change-badge.same { color: #bbb; }
-    .change-badge.pts { color: #8e44ad; font-size: 10px; background:#f4ebf9; padding: 2px 4px; border-radius: 4px;} 
+    .change-badge.pts { color: #8e44ad; font-size: 10px; background:#f4ebf9; padding: 2px 4px; border-radius: 4px;}
 
     .divider { width: 1px; height: 36px; background: #eee; flex-shrink: 0; }
     .book-info { flex: 1; min-width: 0; }
     .book-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .book-meta { font-size: 12px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
-    .our-badge { font-size: 10px; font-weight: 700; color: #fff; background: var(--store-color); border-radius: 4px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0; }
+    .our-badge { font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0; }
     .store-badge-mini { font-size: 9px; padding: 1px 4px; border-radius: 3px; color: #fff; font-weight: bold; }
 
     .book-link a { font-size: 11px; color: var(--store-color); text-decoration: none; border: 1px solid var(--store-color); border-radius: 4px; padding: 3px 7px; white-space: nowrap; font-weight: 600; transition: all 0.15s; }
@@ -112,7 +113,7 @@
     .card-author { font-size: 10px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .card-pub-row { display: flex; align-items: center; gap: 4px; min-width: 0; flex-wrap: wrap;}
     .card-publisher { font-size: 10px; color: #bbb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
-    .card-our-badge { font-size: 9px; font-weight: 700; color: #fff; background: var(--store-color); border-radius: 3px; padding: 1px 4px; white-space: nowrap; flex-shrink: 0; }
+    .card-our-badge { font-size: 9px; font-weight: 700; color: #fff; border-radius: 3px; padding: 1px 4px; white-space: nowrap; flex-shrink: 0; }
     .card-link { margin-top: auto; padding-top: 6px; }
     .card-link a { display: block; text-align: center; font-size: 10px; font-weight: 600; color: var(--store-color); text-decoration: none; border: 1px solid var(--store-color); border-radius: 4px; padding: 3px 0; transition: all 0.15s; }
     .card-link a:hover { background: var(--store-color); color: #fff; }
@@ -133,13 +134,16 @@
     .trend-rank { font-weight: 800; font-size: 16px; color: var(--store-color); }
     .trend-rank.none { color: #ccc; font-weight: 400; font-size: 13px; }
     .trend-stores { display: flex; gap: 4px; }
+
+    .footer { text-align: center; padding: 40px 20px; font-size: 12px; color: #aaa; margin-top: 20px; }
+    .footer a { color: #888; text-decoration: none; border-bottom: 1px solid #ddd; transition: color 0.2s; }
+    .footer a:hover { color: var(--store-color); border-color: var(--store-color); }
   </style>
 </head>
 <body>
-
 <div class="header" id="header">
   <div class="header-inner">
-    <div class="logo" id="logo">REALTIME BESTSELLER</div>
+    <div class="logo" id="logo">REALTIME BESTSELLER by ahu(orozi) </div>
     <h1>실시간 베스트셀러</h1>
     <div class="tabs-row">
       <div class="tabs">
@@ -173,6 +177,10 @@
   </div>
 </div>
 
+<div class="footer">
+  Data provided by <a href="https://github.com/jangmee/kyobo-bestseller" target="_blank">Jangmee</a>
+</div>
+
 <script>
 // 🔌 장미 씨 원본 저장소 다이렉트 연결 (시차 없음)
 const RAW = "https://raw.githubusercontent.com/jangmee/kyobo-bestseller/main/";
@@ -180,13 +188,17 @@ const CSV_FILES = { kyobo: "kyobo_bestseller.csv", aladin: "aladin_bestseller.cs
 const STORE_COLORS = { kyobo: "#6DB329", aladin: "#FB2888", yes24: "#0080FF", total: "#8e44ad" };
 const STORE_NAMES = { kyobo: "교보", aladin: "알라딘", yes24: "예스24" };
 
+// 💡 글자 수가 긴 브랜드부터 배열에 배치해야 '윌북주니어'가 '윌북'으로 잘못 잡히지 않습니다.
 const OUR_PUBLISHERS = [
-  "다산북스", "다산책방", "다산초당", "다산라이프", "다산사이언스",
-  "다산에듀", "놀", "오브제", "다산3.0", "다산4.0", "유영",
-  "사무사책방", "요요", "브라이트", "다산어린이", "스튜디오다산",
-  "블라썸", "몬스터", "라비앙", "다산코믹스", "다산스마트에듀",
-  "오티움", "수카"
+  "윌북주니어", "윌북아트", "윌북"
 ];
+
+// 🎨 출판사 브랜드별 맞춤 배지 컬러 설정
+const PUB_COLORS = {
+  "윌북": "#E91E63",       // 핑크/레드
+  "윌북주니어": "#FF9800", // 눈에 띄는 주황색
+  "윌북아트": "#9C27B0"    // 고급스러운 보라색
+};
 
 let currentMainTab = 'latest';
 let currentStore = 'kyobo';
@@ -194,7 +206,7 @@ let historyData = [];
 let filterOn = false;
 let searchQuery = '';
 let currentView = 'list';
-let searchTimeout; 
+let searchTimeout;
 
 function setStoreColor(store) {
   document.documentElement.style.setProperty('--store-color', STORE_COLORS[store]);
@@ -226,11 +238,10 @@ function isOurPublisher(publisher) {
   return OUR_PUBLISHERS.some(p => publisher && publisher.includes(p));
 }
 
-/* 🚥 만능 기호 판독기: ▲, ▼, 상승, 하락 모두 커버 */
 function changeIcon(change, points = null) {
   if (points !== null) return { icon: `${points}점`, cls: 'pts' };
-  const val = (change || '').toString().trim().toUpperCase(); 
-  
+  const val = (change || '').toString().trim().toUpperCase();
+
   if (!val || val === '-' || val === '0' || val === '유지') {
     return { icon: '–', cls: 'same' };
   }
@@ -270,7 +281,7 @@ function setView(view) {
 function applyFilters() {
   const items = document.querySelectorAll('.book-item, .gallery-card');
   let visibleCount = 0;
-  
+
   items.forEach(el => {
     const isOurs = el.dataset.ours === 'true';
     const targets = el.querySelectorAll('.book-title, .card-title, .book-meta, .card-author, .card-publisher');
@@ -279,7 +290,7 @@ function applyFilters() {
     const matchesPub = !filterOn || isOurs;
     const matchesSearch = combinedText.includes(searchQuery);
     const isHidden = !(matchesPub && matchesSearch);
-    
+
     el.classList.toggle('hidden', isHidden);
     if (!isHidden) visibleCount++;
   });
@@ -306,11 +317,11 @@ function toggleFilter() {
 }
 
 function handleSearch(e) {
-  clearTimeout(searchTimeout); 
-  searchTimeout = setTimeout(() => { 
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
     searchQuery = e.target.value.toLowerCase().trim();
     applyFilters();
-  }, 200); 
+  }, 200);
 }
 
 async function handleRefresh(btn) {
@@ -327,15 +338,15 @@ function calculateTotal(kData, aData, yData) {
       if (!t) return;
       const k = t + '|' + a;
       const r = parseInt(b['순위']) || 100;
-      const pts = 101 - r; 
-      
+      const pts = 101 - r;
+
       if (!bookMap[k]) bookMap[k] = { ...b, points: 0, stores: [] };
       bookMap[k].points += pts;
       bookMap[k].stores.push(sName);
     });
   };
   process(kData, 'kyobo'); process(aData, 'aladin'); process(yData, 'yes24');
-  
+
   const sorted = Object.values(bookMap).sort((a, b) => b.points - a.points);
   sorted.forEach((b, i) => { b['순위'] = i + 1; b['순위변동'] = '-'; });
   return sorted;
@@ -346,10 +357,10 @@ function openTrendModal(el) {
   const author = el.dataset.author;
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalAuthor').textContent = author;
-  
+
   let html = '';
   const limits = [...historyData].reverse().slice(0, 12);
-  
+
   limits.forEach((entry, idx) => {
     const time = toOnTheHour(entry['수집시각']);
     let rankText = '<span class="trend-rank none">차트 아웃</span>';
@@ -374,15 +385,15 @@ function openTrendModal(el) {
         if(r <= 10) isTop = true;
       }
     }
-    
+
     html += `<div class="trend-item ${isTop ? 'is-top' : ''}">
       <span class="trend-time">${idx === 0 ? '🕒 최신 (현재)' : time}</span>
       ${rankText}
     </div>`;
   });
-  
+
   if(limits.length === 0) html = '<div style="padding:20px; text-align:center; color:#999;">과거 데이터가 아직 없습니다.</div>';
-  
+
   document.getElementById('trendList').innerHTML = html;
   document.getElementById('trendModal').classList.add('show');
 }
@@ -411,6 +422,10 @@ function renderBooks(books, container) {
     const authorClean = author.replace(/"/g, '&quot;');
     const isOurs = isOurPublisher(publisher);
 
+    // 💡 우리 출판사 이름 동적 할당 및 맞춤형 색상 지정
+    const ourPubName = isOurs ? OUR_PUBLISHERS.find(p => publisher.includes(p)) : '';
+    const pubBgColor = ourPubName ? (PUB_COLORS[ourPubName] || 'var(--store-color)') : '';
+
     let storeBadges = '';
     if (isTotal && book.stores) {
       storeBadges = book.stores.map(s => `<span class="store-badge-mini" style="background:${STORE_COLORS[s]}">${STORE_NAMES[s][0]}</span>`).join(' ');
@@ -424,7 +439,7 @@ function renderBooks(books, container) {
       <div class="divider"></div>
       <div class="book-info">
         <div class="book-title">${book['제목']||''}</div>
-        <div class="book-meta">${author} · ${publisher} ${isOurs ? '<span class="our-badge">다산</span>' : ''} ${storeBadges}</div>
+        <div class="book-meta">${author} · ${publisher} ${isOurs ? `<span class="our-badge" style="background:${pubBgColor}">${ourPubName}</span>` : ''} ${storeBadges}</div>
       </div>
       ${link ? `<div class="book-link"><a href="${link}" target="_blank" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
     </div>`;
@@ -436,7 +451,7 @@ function renderBooks(books, container) {
         <div class="card-rank-row"><span class="card-rank ${rank<=3?'top3':''}">${rank}</span><span class="card-change ${cls}">${icon}</span></div>
         <div class="card-title">${book['제목']||''}</div>
         <div class="card-author">${author}</div>
-        <div class="card-pub-row"><span class="card-publisher">${publisher}</span>${isOurs ? '<span class="card-our-badge">다산</span>' : ''} ${storeBadges}</div>
+        <div class="card-pub-row"><span class="card-publisher">${publisher}</span>${isOurs ? `<span class="card-our-badge" style="background:${pubBgColor}">${ourPubName}</span>` : ''} ${storeBadges}</div>
         ${link ? `<div class="card-link"><a href="${link}" target="_blank" referrerpolicy="no-referrer" onclick="event.stopPropagation()">상세 페이지</a></div>` : ''}
       </div>
     </div>`;
@@ -468,7 +483,7 @@ function renderHistoryList(history) {
   const container = document.getElementById('history-view');
   if (!history || history.length === 0) { container.innerHTML = '<div class="error">지난 차트가 아직 없어요.</div>'; return; }
   let html = '<div class="history-list">';
-  
+
   [...history].reverse().forEach((entry, i) => {
     const time = toOnTheHour(entry['수집시각'] || '');
     let topTitle = '데이터 없음';
@@ -490,7 +505,7 @@ function renderHistoryList(history) {
       <div>
         <div class="history-time">${time}</div>
         <div class="history-top">1위: ${topTitle}</div>
-        ${hasOurs ? `<span class="history-our-badge">다산 ${ourCount}권</span>` : ''}
+        ${hasOurs ? `<span class="history-our-badge">윌북 계열 ${ourCount}권</span>` : ''}
       </div><span style="color:#ccc;font-size:18px">›</span>
     </div>`;
   });
@@ -502,8 +517,8 @@ function showHistoryDetail(index) {
   const container = document.getElementById('history-view'); container.innerHTML = '';
   const btn = document.createElement('button'); btn.className = 'back-btn'; btn.innerHTML = '← 목록으로';
   btn.onclick = () => renderHistoryList(historyData); container.appendChild(btn);
-  const inner = document.createElement('div'); container.appendChild(inner); 
-  
+  const inner = document.createElement('div'); container.appendChild(inner);
+
   if(currentStore === 'total') {
      const d = entry['데이터'];
      renderBooks(calculateTotal(d['kyobo'], d['aladin'], d['yes24']), inner);
@@ -531,7 +546,7 @@ function parseCSV(text) {
 async function fetchWithRetry(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch(url, { cache: 'no-store' }); 
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error('서버 응답 오류');
       return res;
     } catch (err) {
@@ -544,7 +559,7 @@ async function fetchWithRetry(url, retries = 3) {
 async function loadLatest() {
   const container = document.getElementById('latest-view');
   if (container.innerHTML.includes('loading')) container.innerHTML = '<div class="loading">불러오는 중...</div>';
-  
+
   try {
     if (currentStore === 'total') {
       const [kRes, aRes, yRes] = await Promise.all([
