@@ -353,10 +353,37 @@ def collect_once(is_scheduled=True):
             prev = last.get(book["제목"], "")
             book["이전순위"] = prev
             book["순위변동"] = calc_change(book["순위"], prev)
-        save_csv(store, books)
-        save_history(all_books, now)
-        print("\n수집 완료 - CSV 및 history.json 저장 완료!")
+            save_csv(store, books)
 
+    def save_history(all_books, now):
+        path = Path(HISTORY_FILE)
+        history = []
+        if path.exists():
+            with open(path, encoding="utf-8") as f:
+                try:
+                    history = json.load(f)
+                    history = [h for h in history if isinstance(h.get("데이터", {}), dict)]
+                except Exception:
+                    history = []
+
+        # 1. 일단 방금 캐온 최신 데이터를 창고에 밀어 넣습니다.
+        history.append({"수집시각": now, "데이터": all_books})
+
+        # 2. 🧹 [슈퍼 진공청소기] 전체 창고를 시간대별로 묶어 가장 최신 데이터 1개만 남깁니다!
+        cleaned_dict = {}
+        for entry in history:
+            # "2026-05-21 13" 처럼 '연-월-일 시간' 까지만 딱 잘라냅니다.
+            hour_key = entry.get("수집시각", "")[:13]
+            # 딕셔너리(dict) 특성을 이용해, 같은 시간대면 무조건 맨 마지막(최신) 데이터로 덮어씌웁니다.
+            cleaned_dict[hour_key] = entry
+
+            # 3. 깨끗하게 중복이 제거된 데이터들만 다시 모아서 저장합니다.
+        history = list(cleaned_dict.values())
+        history = history[-30:]  # 최근 30개(30시간) 타임라인만 유지
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        print(f"  history.json 저장 (총 {len(history)}회)")
 
 def main():
     parser = argparse.ArgumentParser()
