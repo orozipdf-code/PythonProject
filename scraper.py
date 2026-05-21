@@ -354,8 +354,8 @@ def collect_once(is_scheduled=True):
             book["이전순위"] = prev
             book["순위변동"] = calc_change(book["순위"], prev)
         save_csv(store, books)
-    save_history(all_books, now)
-    print("\n수집 완료 - CSV 및 history.json 저장 완료!")
+        save_history(all_books, now)
+        print("\n수집 완료 - CSV 및 history.json 저장 완료!")
 
 
 def main():
