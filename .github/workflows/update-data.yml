@@ -27,9 +27,9 @@ jobs:
       - name: 수집 실행
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.source }}" = "cron" ]; then
-            scraper.py --event schedule
+            python scraper.py --event schedule
           else
-            scraper.py --event workflow_dispatch
+            python scraper.py --event workflow_dispatch
           fi
       - name: 결과 저장
         run: |
