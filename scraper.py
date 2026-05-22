@@ -32,7 +32,7 @@ def fetch_html(url):
         page.wait_for_timeout(4000)
         html = page.content()
         browser.close()
-    return html
+        return html
 
 
 def parse_kyobo(html, now):
@@ -74,8 +74,8 @@ def parse_kyobo(html, now):
                 img_url = src.replace("fit-in/300x0", "fit-in/458x0").split("?")[0]
                 img_url = img_url.replace("http://", "https://")
             books.append({"수집시각": now, "순위": rank, "제목": title,
-                          "저자": author, "출판사": publisher, "링크": link,
-                          "이미지URL": img_url, "이전순위": "", "순위변동": ""})
+                           "저자": author, "출판사": publisher, "링크": link,
+                           "이미지URL": img_url, "이전순위": "", "순위변동": ""})
     return books
 
 
@@ -128,8 +128,8 @@ def parse_aladin_html(html, now, offset=0):
             img_url = src.replace("cover150", "cover500")
             img_url = img_url.replace("http://", "https://")
         books.append({"수집시각": now, "순위": rank, "제목": title,
-                      "저자": author, "출판사": publisher, "링크": link,
-                      "이미지URL": img_url, "이전순위": "", "순위변동": ""})
+                       "저자": author, "출판사": publisher, "링크": link,
+                       "이미지URL": img_url, "이전순위": "", "순위변동": ""})
     return books
 
 
@@ -153,13 +153,11 @@ def clean_yes24_author(raw):
     예스24 표기 규칙:
       '/' = 역할 구분자 (저자/역자, 글작가/그림작가 등)
       ',' = 같은 역할의 공동저자 구분자
-
     따라서 '/' 첫 번째 세그먼트만 저자 영역으로 처리하고
     이후 세그먼트(역자·편역자·그림작가 등)는 전부 무시한다.
     """
     # '저'/'역' 등 순수 역할 단어 단독 토큰은 이름으로 취급하지 않음
     ROLE_ONLY = {'저', '역', '글', '편', '감', '그림', '사진', '기획', '감수'}
-
     if not raw:
         return ""
     # UI 아티팩트 제거: "정보 더 보기" 이후 텍스트 전체 삭제
@@ -167,13 +165,10 @@ def clean_yes24_author(raw):
     raw = re.sub(r'\s+', ' ', raw).strip()
     if not raw:
         return ""
-
     # '/' 이후는 지원 역할(역자·편역자·그림작가 등) → 첫 세그먼트만 처리
     first_segment = raw.split('/')[0].strip()
-
     # 쉼표·가운뎃점으로 공동저자 분리
     subparts = [sp.strip() for sp in re.split(r'[,·]', first_segment) if sp.strip()]
-
     authors = []
     for sp in subparts:
         # 괄호 안 역할 표기 제거: (글), (그림), (역) 등
@@ -188,11 +183,10 @@ def clean_yes24_author(raw):
             name = name[:m.start()].strip()
             if name and name not in ROLE_ONLY:
                 authors.append(name)
-            return (authors[0] + " 외") if authors else (name + " 외" if name else "")
+                return (authors[0] + " 외") if authors else (name + " 외" if name else "")
         # 순수 역할 단어 단독 토큰은 저자 목록에서 제외
         if name and name not in ROLE_ONLY:
             authors.append(name)
-
     if not authors:
         return raw
     return authors[0] if len(authors) == 1 else authors[0] + " 외"
@@ -228,8 +222,8 @@ def parse_yes24(html, now):
         goods_id = link.split("/")[-1] if link else ""
         img_url = f"https://image.yes24.com/goods/{goods_id}/XL" if goods_id else ""
         books.append({"수집시각": now, "순위": rank, "제목": title,
-                      "저자": author, "출판사": publisher, "링크": link,
-                      "이미지URL": img_url, "이전순위": "", "순위변동": ""})
+                       "저자": author, "출판사": publisher, "링크": link,
+                       "이미지URL": img_url, "이전순위": "", "순위변동": ""})
         if len(books) >= 100:
             break
     return books
@@ -244,6 +238,7 @@ def scrape_all(now):
     except Exception as e:
         print(f"  교보문고 실패: {e}")
         results["kyobo"] = []
+
     print("알라딘 수집 중...")
     try:
         results["aladin"] = scrape_aladin(now)
@@ -251,6 +246,7 @@ def scrape_all(now):
     except Exception as e:
         print(f"  알라딘 실패: {e}")
         results["aladin"] = []
+
     print("예스24 수집 중...")
     try:
         html = fetch_html("https://www.yes24.com/product/category/realtimebestseller?categoryNumber=001")
@@ -259,6 +255,7 @@ def scrape_all(now):
     except Exception as e:
         print(f"  예스24 실패: {e}")
         results["yes24"] = []
+
     return results
 
 
@@ -273,12 +270,13 @@ def load_last_snapshot(store, current_hour=None):
     # 같은 시간대(정각 기준) 엔트리는 건너뛰고 이전 시간대 마지막 데이터를 기준으로 삼음.
     # (:23 수집 후 :51 수집 시, :23 엔트리를 비교 기준으로 쓰면 변동이 거의 없어
     #  순위변동이 모두 '-'로 표시되는 문제 방지)
+    last_entry = None
     for entry in reversed(history):
         if current_hour and entry.get("수집시각", "")[:13] == current_hour:
             continue
         last_entry = entry
         break
-    else:
+    if last_entry is None:
         return {}
     data = last_entry.get("데이터", {})
     if not isinstance(data, dict):
@@ -321,29 +319,34 @@ def save_history(all_books, now):
                 history = [h for h in history if isinstance(h.get("데이터", {}), dict)]
             except Exception:
                 history = []
-    # 같은 정각 기준 데이터가 이미 있으면 최신 수집분으로 교체
-    # (교체하지 않으면 최신 CSV와 history.json 마지막 엔트리가 달라져
-    #  '최신 차트'와 '지난 차트'의 순위가 어긋남)
-    current_hour = now[:13]  # "2026-03-28 09" 형태
-    replaced = False
-    for i, entry in enumerate(history):
-        if entry.get("수집시각", "")[:13] == current_hour:
-            history[i] = {"수집시각": now, "데이터": all_books}
-            replaced = True
-            print(f"  {current_hour}시 데이터 교체 저장")
-            break
-    if not replaced:
-        history.append({"수집시각": now, "데이터": all_books})
-    history = history[-30:]
+
+    # 1. 일단 방금 캐온 최신 데이터를 창고에 밀어 넣습니다.
+    history.append({"수집시각": now, "데이터": all_books})
+
+    # 2. 🧹 [슈퍼 진공청소기] 전체 창고를 시간대별로 묶어 가장 최신 데이터 1개만 남깁니다!
+    cleaned_dict = {}
+    for entry in history:
+        # "2026-05-21 13" 처럼 '연-월-일 시간' 까지만 딱 잘라냅니다.
+        hour_key = entry.get("수집시각", "")[:13]
+        # 딕셔너리(dict) 특성을 이용해, 같은 시간대면 무조건 맨 마지막(최신) 데이터로 덮어씌웁니다.
+        cleaned_dict[hour_key] = entry
+
+    # 3. 깨끗하게 중복이 제거된 데이터들만 다시 모아서 저장합니다.
+    history = list(cleaned_dict.values())
+    history = history[-30:]  # 최근 30개(30시간) 타임라인만 유지
+
     with open(path, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
     print(f"  history.json 저장 (총 {len(history)}회)")
 
+
 def collect_once(is_scheduled=True):
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     print(f"\n{now} 수집 시작\n")
+
     all_books = scrape_all(now)
     current_hour = now[:13]  # "2026-04-09 09" 형태
+
     for store in STORES:
         books = all_books.get(store, [])
         if not books:
@@ -353,44 +356,21 @@ def collect_once(is_scheduled=True):
             prev = last.get(book["제목"], "")
             book["이전순위"] = prev
             book["순위변동"] = calc_change(book["순위"], prev)
-            save_csv(store, books)
+        save_csv(store, books)
 
-    def save_history(all_books, now):
-        path = Path(HISTORY_FILE)
-        history = []
-        if path.exists():
-            with open(path, encoding="utf-8") as f:
-                try:
-                    history = json.load(f)
-                    history = [h for h in history if isinstance(h.get("데이터", {}), dict)]
-                except Exception:
-                    history = []
+    # ✅ 핵심 수정: CSV 저장 후 history.json 에도 반드시 누적 저장
+    #    (이 호출이 없어서 '지난 차트'가 갱신되지 않던 버그를 수정)
+    save_history(all_books, now)
 
-        # 1. 일단 방금 캐온 최신 데이터를 창고에 밀어 넣습니다.
-        history.append({"수집시각": now, "데이터": all_books})
-
-        # 2. 🧹 [슈퍼 진공청소기] 전체 창고를 시간대별로 묶어 가장 최신 데이터 1개만 남깁니다!
-        cleaned_dict = {}
-        for entry in history:
-            # "2026-05-21 13" 처럼 '연-월-일 시간' 까지만 딱 잘라냅니다.
-            hour_key = entry.get("수집시각", "")[:13]
-            # 딕셔너리(dict) 특성을 이용해, 같은 시간대면 무조건 맨 마지막(최신) 데이터로 덮어씌웁니다.
-            cleaned_dict[hour_key] = entry
-
-            # 3. 깨끗하게 중복이 제거된 데이터들만 다시 모아서 저장합니다.
-        history = list(cleaned_dict.values())
-        history = history[-30:]  # 최근 30개(30시간) 타임라인만 유지
-
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-        print(f"  history.json 저장 (총 {len(history)}회)")
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--loop", type=int, default=0)
     parser.add_argument("--event", type=str, default="schedule")
     args = parser.parse_args()
+
     is_scheduled = (args.event == "schedule")
+
     if args.loop > 0:
         while True:
             collect_once(is_scheduled=True)
